@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+	<meta charset="UTF-8">
+	<title>Boto.js - Sample</title>
+</head>
+<body>
+	<nav>
+		<a href="opa">opa</a>
+		<a href="ok">ok</a>
+	</nav>
+	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.0/jquery.min.js"></script>
+
+	<script src="iamboto/js/lipelopeslage.boto.js"></script>
+	<script>
+		Boto.initWithSitemap("iamboto/json/sitemap.json", function(){
+			//Boto.navigateTo("/home/produtos");
+			console.log("current: ", Boto.currentPage)
+			setTimeout(function(){
+				console.log("current: ",Boto.currentPage)
+			}, 2000)
+		});
+
+
+
+		$(function() {
+			$('nav a').click(function(e) {
+				$("#loading").show();
+				href = $(this).attr("href");
+				
+				loadContent(href);				
+				// HISTORY.PUSHSTATE
+				history.pushState(href, 'New URL: '+href, href);
+				e.preventDefault();
+				
+				
+			});
+		
+
+		});
+	
+		function loadContent(url){
+			// USES JQUERY TO LOAD THE CONTENT
+			console.log('loadContent',url)
+			
+		}
+
+
+
+	
+
+	
+
+	</script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+ {"id":"root", "klass":"assets/js/pages/Root.js", "route":"/root", "sub": [ 
+ 	{"id":"home", "route":"/home", "klass":"assets/js/pages/Home.js", "sub":[
+ 		{"id":"produtos", "route":"/produtos", "klass":"assets/js/pages/Produtos.js"}
+ 	]}
+ ]}
