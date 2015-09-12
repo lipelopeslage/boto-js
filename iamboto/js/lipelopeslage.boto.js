@@ -9,19 +9,41 @@
 	} 
 
 	root.Boto = {
-		initWithSitemap : function(sitemapPath, callback){
+		init : function(obj){
 			self = this;
-			Boto.loaders.loadDoc(sitemapPath, function(data){
+			self.config = obj;
+			self.useLog = obj.useLog || false
+			this.setHashChange(obj.onHashChange);
+			Boto.loaders.loadDoc(obj.siteMap, function(data){
 				initRoutes(data);
-				if(callback && typeof(callback) == "function") callback(data);
-			}); 
+				self.startNavigation();
+				if(obj.callback && typeof(obj.callback) == "function") obj.callback(data);
+			});
+		}
+		, getDefaultPath : function(){
+			return this.config.defaultPath;
+		}
+		, useLog : false
+		, startNavigation : function(){
+			if(this.config.autoStart != undefined && !this.config.autoStart) return;
+			if(location.hash)
+				self.navigateTo(location.hash.replace("#",""));
+			else
+				self.navigateTo();
 		}
 		, navigateTo: function(path){ 
-			routes.manage(path || "/"+self.defaultPage);
+			routes.manage(path || this.config.defaultPath);
 		}
-		,setPage : function(pageScope){
+		, setPage : function(pageScope){
 			var newPage = new pageScope();
 			Boto.page = newPage.page;
+		}
+		, setHashChange : function(fn){
+			window.onhashchange = fn || function(e){
+				var h = e.newURL;
+				h = h.substr(h.indexOf("#")+1, h.length);
+				Boto.navigateTo(h);
+			}
 		}
 		, setCurrentPage : function(page){this.currentPage = page;}
 		, getBreadCrumb : function(){ return routes.getBreadCrumb(); }
@@ -139,13 +161,15 @@
 				,route = object.route || ""
 				,klass = object.klass || ""
 				,parentRoute = parentRoute || "", tagName = object.id, sub = []
-				,subNodes = object.sub || [];
+				,subNodes = object.sub || []
+				,pageAssets = object.assets || [];
 
+			
 			for(var i = 0, total = subNodes.length; i < total; i++){
 				sub.push(parseObject(subNodes[i], route));  //sub.push(parseNode(subNodes.item(i), route));
 			}
 
-			return {tagName: tagName, id: id, klass: klass, route: route, fullRoute: parentRoute+route, sub: sub};
+			return {tagName: tagName, id: id, klass: klass, route: route, fullRoute: parentRoute+route, sub: sub, assets: pageAssets};
 		}
 		routes = parseObject(json);
 		callback(routes);
@@ -158,12 +182,25 @@
 			loadScript(data.klass, function(e){
 				// pegar o valor da página recém carregada de Boto.page foi o jeito mais seguro
 				// de pegar o conteúdo de um arquivo e inserí-lo em outro (através do escopo global)
-				data.page = Boto.page || Boto.createBlankPage(); 
+				data.page = (Boto.page) ? checkPage(Boto.page) : Boto.createBlankPage(); 
 				data.page.pageInfo = pageInfo; // o atributo pageInfo dentro de cada página contém as informações vindas do jsonDoc
 				Boto.setCurrentPage(data.page);
 				Boto.page = null; // elimina o valor para poder ser referenciado num próximo load
 				callback();
 			})
+
+			function checkPage(page){
+				var blank = Boto.createBlankPage();
+				for(i in blank){
+					if(page[i] == undefined) page[i] = blank[i];
+				}
+				return page;
+			}
+		}
+		,loadImage : function(iname, callback){
+			var img = new Image();
+			img.src = iname;
+			img.onload = callback;
 		}
 		,loadDoc : function(dname, callback) {
 			if (window.XMLHttpRequest) {
@@ -181,33 +218,38 @@
 					}
 				}				
 			}
-			xhttp.open("GET", dname, false);
+			xhttp.open("GET", dname, true);
 			xhttp.send();
 		}
 		,loadAssets : null
 	}
 
 	root.createBlankPage = function(){
+		var useLog = Boto.useLog;
 		return {
 			init : function(){
-				console.log(this.pageInfo.id+" [ABSCTRACT] init()");
+				useLog && console.log(this.pageInfo.id+" [ABSCTRACT] init()");
 				this.initiated();
 			},
 			show : function(){
-				console.log(this.pageInfo.id+" [ABSTRACT] show()");
+				useLog && console.log(this.pageInfo.id+" [ABSTRACT] show()");
 				this.showed();
 			},
 			update : function(){
-				console.log(this.pageInfo.id+" [ABSTRACT] update()");
+				useLog && console.log(this.pageInfo.id+" [ABSTRACT] update()");
 				this.updated();
 			},
 			hide : function(){
-				console.log(this.pageInfo.id+" [ABSTRACT] hide()");
+				useLog && console.log(this.pageInfo.id+" [ABSTRACT] hide()");
 				this.initiated();
 			},
 			resize : function(){
-				console.log(this.pageInfo.id+" [ABSTRACT] resize()");
+				useLog && console.log(this.pageInfo.id+" [ABSTRACT] resize()");
 				this.initiated();
+			},
+			getAsset : function(uriOrID, callback, isExternal){
+				// se isExternal == true, uriOrID é uma url
+				// senão, busca o id no vetor de assets de page.getInfo()
 			}
 		}
 	}
@@ -349,12 +391,8 @@
 ******************************
 /*****************************/
 ;(function(root, undefined) {
-	window.onhashchange = function(e){
-		var h = e.newURL;
-		h = h.substr(h.indexOf("#")+1, h.length);
-		Boto.navigateTo(h);
-	}
+	
 	window.onpopstate = function(event) {
-		console.log("push: ",history.state)
+		//console.log("push: ",history.state)
 	}
 })(window.Boto)

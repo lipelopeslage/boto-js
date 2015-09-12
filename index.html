@@ -13,17 +13,22 @@
 
 	<script src="iamboto/js/lipelopeslage.boto.js"></script>
 	<script>
-		Boto.initWithSitemap("iamboto/json/sitemap.json", function(){
-			//Boto.navigateTo("/home/produtos");
-			console.log("current: ", Boto.currentPage)
-			setTimeout(function(){
-				console.log("current: ",Boto.currentPage)
-			}, 2000)
+		Boto.init({
+			siteMap : "https://raw.githubusercontent.com/lipelopeslage/boto-js/dev/iamboto/json/sitemap.json?token=AAKOG00ABAb-fMT3vH4Cuthv0Emv_V3bks5V_HNMwA%3D%3D",//iamboto/json/sitemap.json", 
+			callback : function(){
+				setTimeout(function(){
+					console.log("current: ",Boto.currentPage)
+				}, 2000)
+			},
+			defaultPath : "/home", //optional
+			useLog : true, //default false
+			autoStart : true //default true
 		});
 
 
 
 		$(function() {
+
 			$('nav a').click(function(e) {
 				$("#loading").show();
 				href = $(this).attr("href");
