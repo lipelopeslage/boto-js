@@ -1,0 +1,1 @@
+Boto.setPage(function(){this.page={show:function(o){console.log(this.pageInfo.id,"show",o),this.showed()},update:function(o){console.log(this.pageInfo.id,"update",o),this.updated()},hide:function(){console.log(this.pageInfo.id,"hide"),this.hidden()},resize:function(){console.log(this.pageInfo.id,"resize")}}});
