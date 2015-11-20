@@ -180,8 +180,6 @@ Boto.setPage(
 		{"id" : "foto-home", "src" : "caminho-foto/foto-home.jpg"}
 	]
 }
-	 	
-```
 
 
 #### 
