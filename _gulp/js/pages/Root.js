@@ -13,11 +13,11 @@ Boto.setPage(function(){
 			this.initiated();
 		}
 		,show : function(params) {
-			console.log(this.pageInfo.id,"show", params);		
+			console.log(this.pageInfo.id,"show()");		
 			this.showed();
 		}
 		,update : function(params) {
-			console.log(this.pageInfo.id,"update", params);			
+			console.log(this.pageInfo.id,"update()");			
 			this.updated();
 		}
 		,hide : function() {

@@ -13,8 +13,12 @@ Boto.setPage(function(){
 			this.initiated();
 		}
 		,*/show : function(params) {
-			console.log(this.pageInfo.id,"show", params);		
+			var p = document.createElement('p');
+			p.innerHTML = "Você clicou em produtos";
+			document.body.appendChild(p) ;	
+			document.body.appendChild(this.getAsset("boto-img"));
 			this.showed();
+			console.log(this.pageInfo.id,"show", params);
 		}
 		,update : function(params) {
 			console.log(this.pageInfo.id,"update", params);			

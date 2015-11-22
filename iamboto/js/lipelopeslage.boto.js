@@ -3,22 +3,21 @@
 
 	var loaders, routes, self;
 
-	function initRoutes(data) {
-		routes = Boto.routes;
-		routes.init(data);
-	} 
-
 	root.Boto = {
 		init : function(obj){
+			loaders = Boto.loaders;
+			routes = Boto.routes;
 			self = this;
 			self.config = obj;
-			self.useLog = obj.useLog || false
+			self.useLog = obj.useLog || self.useLog
 			this.setHashChange(obj.onHashChange);
-			Boto.loaders.loadDoc(obj.siteMap, function(data){
-				initRoutes(data);
+			if(self.useLog == false && console) console.log = function(){}
+			loaders.loadSitemap(obj.siteMap, function(data){
+				routes.init(data);
 				self.startNavigation();
 				if(obj.callback && typeof(obj.callback) == "function") obj.callback(data);
 			});
+			self.polyfills();
 		}
 		, getDefaultPath : function(){
 			return this.config.defaultPath;
@@ -54,6 +53,37 @@
 				if(breadCrumb[i].page && breadCrumb[i].page.resize) breadCrumb[i].page.resize();
 			}
 		}
+		, polyfills : function(){
+			//forked from: https://developer.mozilla.org/pt-BR/docs/Web/JavaScript/Reference/Global_Objects/Array/map#Specifications
+			if (!Array.prototype.map) {
+			  Array.prototype.map = function(callback, thisArg) {
+			    var T, A, k;
+			    if (this == null) {
+			      throw new TypeError(' this is null or not defined');
+			    }
+			    var O = Object(this);
+			    var len = O.length >>> 0;
+			    if (typeof callback !== 'function') {
+			      throw new TypeError(callback + ' is not a function');
+			    }
+			    if (arguments.length > 1) {
+			      T = thisArg;
+			    }
+				A = new Array(len);
+			    k = 0;
+			    while (k < len) {
+			      var kValue, mappedValue;
+			      if (k in O) {
+			        kValue = O[k];
+			        mappedValue = callback.call(T, kValue, k, O);
+			        A[k] = mappedValue;
+			      }
+			      k++;
+			    }
+			    return A;
+			  };
+			}
+		}
 	}	
 
 })(window)
@@ -71,7 +101,8 @@
 	}
 
 	function runTransition() {
-	  	var transition = transitionsQueue[0], state = transition.state, data = transition.data, params = transition.params || null;
+	  	var transition = transitionsQueue[0], state = transition.state, 
+	  				 data = transition.data, params = transition.params || null;
 		switch(state){
 			case "load":
 				root.loaders.loadPage(data, transitionComplete);
@@ -89,7 +120,10 @@
 				data.page.update(params);
 			break;
 			case "hide":
-				data.page.hidden = transitionComplete;
+				data.page.hidden = function(){
+					data.page = null;
+					transitionComplete();
+				}
 				data.page.hide();
 			break;
 		}
@@ -115,8 +149,7 @@
 ******************************
 /*****************************/
 ;(function(root, undefined) {
-	var routes;
-
+	
 	function loadScript(jsFileString, callback){
 		var head = document.getElementsByTagName('head')[0],
 			script = document.createElement('script'),
@@ -135,61 +168,43 @@
 		head.appendChild(script);
 	}
 
-	function parseXML(xmlDoc, callback){
-		function parseNode(node, parentRoute){
-			var hasAttr = Boolean(node.attributes)
-				,id = (hasAttr && node.attributes[0]) ? node.attributes[0].value || "" : "" 
-				,route = (hasAttr && node.attributes[1]) ? node.attributes[1].value || "" : ""
-				,klass = (hasAttr && node.attributes[2]) ? node.attributes[2].value || "" : ""
-				,parentRoute = parentRoute || "", tagName = node.tagName, sub = []
-				,subNodes = (node.hasChildNodes()) ? node.childNodes : [];
-			
-			for(var i = 0, total = subNodes.length; i < total; i++){
-				if(subNodes[i].attributes) sub.push(parseNode(subNodes[i], route));  //sub.push(parseNode(subNodes.item(i), route));
-			}
-
-			return {tagName: tagName, id: id, klass: klass, route: route, fullRoute: parentRoute+route, sub: sub};
-		}	
-		routes = parseNode(xmlDoc.getElementsByTagName("sitemap").item(0)).sub[0];
-		callback(routes);
-	}
-
-	function parseJSON(jsonDoc, callback){
-		var json = JSON.parse(jsonDoc);
+	function parseJSONSitmap(jsonDoc, callback){
 		function parseObject(object, parentRoute){
-			var id = object.id || "" 
-				,route = object.route || ""
-				,klass = object.klass || ""
-				,parentRoute = parentRoute || "", tagName = object.id, sub = []
-				,subNodes = object.sub || []
-				,pageAssets = object.assets || [];
+			var id = object.id, route = object.route,
+				klass = object.klass, parentRoute = parentRoute || "",
+				sub = [], subNodes = object.sub || [],
+				pageAssets = object.assets || [];
 
-			
-			for(var i = 0, total = subNodes.length; i < total; i++){
-				sub.push(parseObject(subNodes[i], route));  //sub.push(parseNode(subNodes.item(i), route));
-			}
+			subNodes.map(function(node){
+				sub.push(parseObject(node, route));
+			});
 
-			return {tagName: tagName, id: id, klass: klass, route: route, fullRoute: parentRoute+route, sub: sub, assets: pageAssets};
+			return {
+				id: id, 
+				klass: klass, 
+				route: route, 
+				fullRoute: parentRoute+route, 
+				sub: sub, 
+				assets: pageAssets
+			};
 		}
-		routes = parseObject(json);
-		callback(routes);
+		callback(parseObject(JSON.parse(jsonDoc)));
 	}
 
 	root.loaders = {
 		loadPage : function(data, callback) { 
 			// forked from function loadXMLDoc(dname) from: http://www.w3schools.com/dom/dom_loadxmldoc.asp
-			var pageInfo = data;
 			loadScript(data.klass, function(e){
 				// pegar o valor da página recém carregada de Boto.page foi o jeito mais seguro
 				// de pegar o conteúdo de um arquivo e inserí-lo em outro (através do escopo global)
-				data.page = (Boto.page) ? checkPage(Boto.page) : Boto.createBlankPage(); 
-				data.page.pageInfo = pageInfo; // o atributo pageInfo dentro de cada página contém as informações vindas do jsonDoc
+				data.page = (Boto.page) ? comparePage(Boto.page) : Boto.createBlankPage(); 
+				data.page.pageInfo = data; // o atributo pageInfo dentro de cada página contém as informações vindas do jsonDoc
 				Boto.setCurrentPage(data.page);
 				Boto.page = null; // elimina o valor para poder ser referenciado num próximo load
-				callback();
-			})
+				Boto.loaders.loadAssets(data, callback);
+			});
 
-			function checkPage(page){
+			function comparePage(page){
 				var blank = Boto.createBlankPage();
 				for(i in blank){
 					if(page[i] == undefined) page[i] = blank[i];
@@ -202,6 +217,11 @@
 			img.src = iname;
 			img.onload = callback;
 		}
+		,loadSitemap : function(dname, callback) {
+			Boto.loaders.loadDoc(dname, function(res){
+				parseJSONSitmap(res, callback);
+			});
+		}
 		,loadDoc : function(dname, callback) {
 			if (window.XMLHttpRequest) {
 			  xhttp = new XMLHttpRequest();
@@ -211,17 +231,43 @@
 
 			xhttp.onreadystatechange = function() {
 				if(xhttp.readyState == 4){
-					if(String(dname).match(/.xml/)){
-						parseXML(xhttp.responseXML, callback);
-					} else {
-						parseJSON(xhttp.responseText, callback);
-					}
+					callback(xhttp.responseText);
 				}				
 			}
 			xhttp.open("GET", dname, true);
 			xhttp.send();
 		}
-		,loadAssets : null
+		,loadAssets : function(data, callback){
+			var assets = data.assets || [], count = 0, total = assets.length;
+			if(total == 0) {
+				callback();
+				return;
+			}else{
+				function lComplete(){
+					if(count == total - 1){
+						callback();
+					}else{
+						load(count++);
+					}
+				}	
+				function load(idx){
+					var fileName = assets[idx].src, image = fileName.match(/.jpg|.jpeg|.png|.gif/),
+						doc = fileName.match(/.json/);
+					if(image){
+						Boto.loaders.loadImage(fileName, function(e){
+							assets[idx].val = this;
+							lComplete();
+						});
+					}else if(doc){
+						Boto.loaders.loadDoc(fileName, function(json){
+							assets[idx].val = json;
+							lComplete();
+						});
+					}
+				}
+				load(0);
+			}
+		}
 	}
 
 	root.createBlankPage = function(){
@@ -247,9 +293,10 @@
 				useLog && console.log(this.pageInfo.id+" [ABSTRACT] resize()");
 				this.initiated();
 			},
-			getAsset : function(uriOrID, callback, isExternal){
-				// se isExternal == true, uriOrID é uma url
-				// senão, busca o id no vetor de assets de page.getInfo()
+			getAsset : function(id){
+				return this.pageInfo.assets.filter(function(elem){
+					return elem.id == id;
+				})[0].val;
 			}
 		}
 	}
@@ -328,14 +375,12 @@
 			}
 		}
 
-		function initItems(arr, firstTime){
-			var i = 0, total = arr.length;
-			while(i < total){
-				transitions.addTransition("load", arr[i]);
-				transitions.addTransition("init", arr[i], params);
-				transitions.addTransition("show", arr[i], params);
-				i++;
-			}
+		function initItems(breadCrumbArray, params){
+			breadCrumbArray.map(function(item){
+				transitions.addTransition("load", item);
+				transitions.addTransition("init", item, params);
+				transitions.addTransition("show", item, params);
+			});
 		}
 
 		if(breadCrumb){
@@ -343,7 +388,7 @@
 				if(!breadCrumb[i] || breadCrumb[i].route != bCrumb[i].route){ // verifica não só se os breadcrumbs são diferentes, mas o tamanho de um pro outro através de uma posição inexistente no novo array
 					doUpdate = false; //se o breadcrumb anterior for diferente do atual, nao atualiza modulo atual
 					hideItems(breadCrumb.slice(count, breadCrumb.length), false);
-					initItems(bCrumb.slice(count, bCrumb.length))
+					initItems(bCrumb.slice(count, bCrumb.length), params);
 					newBreadCrumb = breadCrumb.slice(0, count).concat(bCrumb.slice(count, bCrumb.length));
 					break;
 				}
@@ -357,7 +402,7 @@
 			}
 			newBreadCrumb = bCrumb.slice();
 		}else{			
-			initItems(bCrumb, true);
+			initItems(bCrumb, params);
 			newBreadCrumb = bCrumb.slice();			
 		}	
 
@@ -383,16 +428,5 @@
 		, getHash : function() {
 			return hash;
 		}
-	}
-})(window.Boto)
-/*****************************
-/*****************************
-***** ADDRESS BAR MANAGER ****
-******************************
-/*****************************/
-;(function(root, undefined) {
-	
-	window.onpopstate = function(event) {
-		//console.log("push: ",history.state)
 	}
 })(window.Boto)
