@@ -7,7 +7,7 @@ Framework para aplicações Single-Page.
 ----------
 
 
-#Incorporando o código
+##Incorporando o código
 
 Para utilizá-lo basta incorporá-lo no seu arquivo **HTML**, e iniciar o framework passando o caminho do arquivo **JSON** que contenha as rotas desejadas. Veja um exemplo do código **Javascript** abaixo:
 
@@ -24,7 +24,7 @@ Boto.init({
 #### 
 ----------
 
-#Definindo rotas
+##Definindo rotas
 
 Rotas precisam ser definidas em um arquivo **JSON**, seguindo a notação de exemplo abaixo:
 #### JSON
@@ -44,7 +44,7 @@ Rotas precisam ser definidas em um arquivo **JSON**, seguindo a notação de exe
 #### 
 ----------
 
-#Inicializando
+##Inicializando
 
 Rotas precisam ser definidas em um arquivo **JSON**, seguindo a notação de exemplo abaixo:
 #### Inicialização simples
@@ -92,7 +92,7 @@ Boto.init({
 #### 
 ----------
 
-#Seções
+##Seções
 
 As rotas são separadas por arquivos **.js** existentes no seu arquivo JSON (veja acima).
 Cada arquivo corresponde a uma rota, para atribuir o comportamento de seção dentro deste arquivo é preciso seguir algumas pequenas padronizações:
@@ -182,7 +182,7 @@ Boto.setPage(
 ----------
 
 
-#Sites que utilizam este framework
+##Sites que utilizam este framework
 
 http://groba.tv
 
